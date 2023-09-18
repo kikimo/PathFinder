@@ -9,6 +9,29 @@ import (
 	"strings"
 )
 
+type Edge struct {
+	From    int64
+	To      int64
+	Reverse bool
+	Parent  *Edge
+}
+
+func (e *Edge) Equal(o *Edge) bool {
+	if e.Reverse == o.Reverse {
+		return e.From == o.From && e.To == o.To
+	}
+	return e.From == o.To && e.To == o.From
+}
+
+func (e *Edge) IsDuplicate(o *Edge) bool {
+	for p := e; p != nil; p = p.Parent {
+		if p.Equal(o) {
+			return true
+		}
+	}
+	return false
+}
+
 type Graph struct {
 	forwardEdges  map[int64]int64
 	backwardEdges map[int64]int64
@@ -23,7 +46,7 @@ func (g *Graph) FindAnyShortestPath(from, to int64) int {
 	if from == to {
 		return 0
 	}
-	open := [][]int64{{from}, {to}}
+	open := [][]Edge{{Edge{From: -1, To: from}}, {Edge{From: -1, To: to}}}
 	steps := 0
 	for len(open[0]) != 0 && len(open[1]) != 0 {
 		steps += 1
@@ -33,26 +56,35 @@ func (g *Graph) FindAnyShortestPath(from, to int64) int {
 			which = 1
 		}
 		// expand open[which]
-		newOpen := []int64{}
+		newOpen := []Edge{}
 		dup := map[int64]struct{}{}
-		for _, p := range open[which] {
-			if f, ok := g.forwardEdges[p]; ok {
+		for i, _ := range open[which] {
+			e := &open[which][i]
+			if f, ok := g.forwardEdges[e.To]; ok {
 				if _, ok := dup[f]; ok {
 					continue
 				}
+				ne := Edge{From: e.To, To: f, Parent: e}
+				if e.IsDuplicate(&ne) {
+					continue
+				}
 				dup[f] = struct{}{}
-				newOpen = append(newOpen, f)
+				newOpen = append(newOpen, ne)
 			}
-			if f, ok := g.backwardEdges[p]; ok {
+			if f, ok := g.backwardEdges[e.To]; ok {
 				if _, ok := dup[f]; ok {
 					continue
 				}
+				ne := Edge{From: e.To, To: f, Parent: e, Reverse: true}
+				if e.IsDuplicate(&ne) {
+					continue
+				}
 				dup[f] = struct{}{}
-				newOpen = append(newOpen, f)
+				newOpen = append(newOpen, ne)
 			}
 		}
-		for _, p := range open[1-which] {
-			if _, ok := dup[p]; ok {
+		for _, e := range open[1-which] {
+			if _, ok := dup[e.To]; ok {
 				return steps
 			}
 		}
@@ -116,7 +148,9 @@ func main() {
 		forwardEdges:  forwardEdges,
 		persons:       persons,
 	}
-	// steps := g.FindAnyShortestPath(37383395412475, 37383395410699)
-	// fmt.Printf("steps: %d\n", steps)
+	var from int64 = 17592186094270
+	var to int64 = 9995
+	steps := g.FindAnyShortestPath(from, to)
+	fmt.Printf("find from %d to %d steps: %d\n", from, to, steps)
 	g.randomAnyShortestPath()
 }
