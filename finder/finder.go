@@ -29,6 +29,7 @@ func (g *Graph) FindAnyShortestPath(from, to int64) int {
 	}
 	open := [][]Edge{{Edge{From: -1, To: from}}, {Edge{From: -1, To: to}}}
 	steps := 0
+	dupNode := map[int64]struct{}{}
 	for len(open[0]) != 0 && len(open[1]) != 0 {
 		steps += 1
 		// fmt.Printf("steps: %d, open[0]: %d, open[1]: %d\n", steps, len(open[0]), len(open[1]))
@@ -43,6 +44,10 @@ func (g *Graph) FindAnyShortestPath(from, to int64) int {
 			e := &open[which][i]
 			if fs, ok := g.forwardEdges[e.To]; ok {
 				for f := range fs {
+				    if _, ok := dupNode[f]; ok {
+						continue
+					}
+					// dupNode[f] = struct{}{}
 					if _, ok := dup[f]; ok {
 						continue
 					}
@@ -56,6 +61,10 @@ func (g *Graph) FindAnyShortestPath(from, to int64) int {
 			}
 			if fs, ok := g.backwardEdges[e.To]; ok {
 				for f := range fs {
+				    if _, ok := dupNode[f]; ok {
+						continue
+					}
+					// dupNode[f] = struct{}{}
 					if _, ok := dup[f]; ok {
 						continue
 					}
@@ -86,6 +95,7 @@ func (g *Graph) FindAnyShortestPathBFS(from, to int64) int {
 		return 0
 	}
 	open := []Edge{{From: -1, To: from}}
+	dupNode := map[int64]struct{}{}
 	for len(open) != 0 {
 		newOpen := []Edge{}
 		dup := map[int64]struct{}{}
@@ -95,6 +105,11 @@ func (g *Graph) FindAnyShortestPathBFS(from, to int64) int {
 			e := &open[i]
 			if fs, ok := g.forwardEdges[e.To]; ok {
 				for f := range fs {
+				    if _, ok := dupNode[f]; ok {
+						continue
+					}
+					dupNode[f] = struct{}{}
+
 					ne := Edge{From: e.To, To: f, Parent: e}
 					if e.IsDuplicate(&ne) {
 						continue
@@ -112,6 +127,11 @@ func (g *Graph) FindAnyShortestPathBFS(from, to int64) int {
 			}
 			if fs, ok := g.backwardEdges[e.To]; ok {
 				for f := range fs {
+				    if _, ok := dupNode[f]; ok {
+						continue
+					}
+					dupNode[f] = struct{}{}
+
 					ne := Edge{From: e.To, To: f, Parent: e, Reverse: true}
 					if e.IsDuplicate(&ne) {
 						continue
